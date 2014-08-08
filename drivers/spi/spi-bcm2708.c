@@ -248,10 +248,6 @@ static int bcm2708_setup_state(struct spi_master *master,
 	if (state) {
 		state->cs = cs;
 		state->cdiv = cdiv;
-		dev_dbg(dev, "setup: want %d Hz; "
-			"bus_hz=%lu / cdiv=%u == %lu Hz; "
-			"mode %u: cs 0x%08X\n",
-			hz, bus_hz, cdiv, bus_hz/cdiv, mode, cs);
 	}
 
 	return 0;

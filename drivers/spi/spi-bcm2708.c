@@ -159,8 +159,6 @@ static void bcm2708_init_pinmode(void)
 	int pin;
 	u32 *gpio = ioremap(GPIO_BASE, SZ_16K);
 
-	u32 *gpio = ioremap(0x20200000, SZ_16K);
-	
 	/* SPI is on GPIO 7..11 */
 	for (pin = 7; pin <= 11; pin++) {
 		INP_GPIO(pin);		/* set mode to GPIO input first */

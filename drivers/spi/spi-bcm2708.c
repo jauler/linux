@@ -298,12 +298,40 @@ out:
 	return 0;
 }
 
+/*
+ * This function sets the ALT mode on the SPI pins so that we can use them with
+ * the SPI hardware.
+ *
+ * FIXME: This is a hack. Use pinmux / pinctrl.
+ */
+static void bcm2708_init_pinmode(void)
+{
+#define INP_GPIO(g) *(gpio+((g)/10)) &= ~(7<<(((g)%10)*3))
+#define SET_GPIO_ALT(g,a) *(gpio+(((g)/10))) |= (((a)<=3?(a)+4:(a)==4?3:2)<<(((g)%10)*3))
+	
+	int pin;
+	u32 *gpio = ioremap(GPIO_BASE, SZ_16K);
+
+	/* SPI is on GPIO 7..11 */
+	for (pin = 7; pin <= 11; pin++) {
+		INP_GPIO(pin);		/* set mode to GPIO input first */
+		SET_GPIO_ALT(pin, 0);	/* set mode to ALT 0 */
+	}
+	
+	iounmap(gpio);
+	
+#undef INP_GPIO
+#undef SET_GPIO_ALT
+}
+
 static int bcm2708_spi_probe(struct platform_device *pdev)
 {
 	struct spi_master *master;
 	struct bcm2708_spi *bs;
 	struct resource *res;
 	int err;
+
+	bcm2708_init_pinmode();
 
 	master = spi_alloc_master(&pdev->dev, sizeof(*bs));
 	if (!master) {
@@ -319,6 +347,7 @@ static int bcm2708_spi_probe(struct platform_device *pdev)
 	master->num_chipselect = 3;
 	master->transfer_one_message = bcm2708_spi_transfer_one;
 	master->dev.of_node = pdev->dev.of_node;
+	master->rt = 1;
 
 	bs = spi_master_get_devdata(master);
 
@@ -355,8 +384,9 @@ static int bcm2708_spi_probe(struct platform_device *pdev)
 	}
 
 	/* initialise the hardware */
+	clk_enable(bs->clk);
 	bcm2708_wr(bs, BCM2708_SPI_CS,
-		   BCM2708_SPI_CS_CLEAR_RX | BCM2708_SPI_CS_CLEAR_TX);
+		   BCM2708_SPI_CS_REN | BCM2708_SPI_CS_CLEAR_RX | BCM2708_SPI_CS_CLEAR_TX);
 
 	err = spi_register_master(master);
 	if (err) {
